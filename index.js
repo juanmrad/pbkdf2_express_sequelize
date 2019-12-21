@@ -15,31 +15,30 @@ app.use(function (request, response, next) {
   next();
 });
 
-app.post("/sign-up", function (req, response) {
+function encryptionPassword(req, response, next){
   var key = pbkdf2.pbkdf2Sync(
     req.body.password, salt, 36000, 256, 'sha256'
   );
   var hash = key.toString('hex');
 
-  models.user.create({ username: req.body.username, password: `pbkdf2_sha256$36000$${salt}$${hash}` })
+  req.body.password = `pbkdf2_sha256$36000$${salt}$${hash}`;
+  next();
+}
+
+app.post("/sign-up", encryptionPassword, function (req, response) {
+  models.user.create({ username: req.body.username, password: req.body.password})
     .then(function (user) {
       response.send(user);
     });
 });
 
-app.post("/login", function (req, response) {
-  models.user.findOne({where: {username: req.body.username}}).then(function (user) {
-    var pass_parts = user.password.split('$');
-    var key = pbkdf2.pbkdf2Sync(
-      req.body.password,
-      pass_parts[2],
-      parseInt(pass_parts[1]),
-      256, 'sha256'
-    );
-    var hash = key.toString('hex');
-    if (hash === pass_parts[3]) {
-      response.send('Passwords Matched!');
-    }
+app.post("/login", encryptionPassword, function (req, response) {
+  models.user.findOne({where: {username: req.body.username, password: req.body.password}})
+  .then(function (user) {
+
+    console.log("There was an user");
+    console.log(user);
+    response.send(user);
   });
 })
 
