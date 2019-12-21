@@ -10,10 +10,12 @@ var salt = crypto.randomBytes(20).toString('hex');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.post("/sign-up", function (req, response) {
-  console.log('creating User');
-  console.log(req.body);
+app.use(function (request, response, next) {
+  console.log(request.method, request.path);
+  next();
+});
 
+app.post("/sign-up", function (req, response) {
   var key = pbkdf2.pbkdf2Sync(
     req.body.password, salt, 36000, 256, 'sha256'
   );
@@ -26,8 +28,6 @@ app.post("/sign-up", function (req, response) {
 });
 
 app.post("/login", function (req, response) {
-  console.log("login");
-
   models.user.findOne({where: {username: req.body.username}}).then(function (user) {
     var pass_parts = user.password.split('$');
     var key = pbkdf2.pbkdf2Sync(
